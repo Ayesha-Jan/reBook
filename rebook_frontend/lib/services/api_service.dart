@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://192.168.188.103"; // for emulator
+  static const String baseUrl = "http://10.0.2.2:8000"; // for emulator
 
   static Future<Map<String, dynamic>> getBook() async {
     final res = await http.get(Uri.parse("$baseUrl/books"));
