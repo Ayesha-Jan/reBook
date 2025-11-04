@@ -22,10 +22,25 @@ def get_db():
 def seed_data():
     db = SessionLocal()
     if not db.query(models.User).first():
-        user = models.User(name="Alice", email="alice@example.com")
-        book = models.Book(title="The Great Gatsby", author="F. Scott Fitzgerald", owner=user)
-        db.add_all([user, book])
+        # Create two users
+        user1 = models.User(name="Jane", email="jane@gmail.com")
+        user2 = models.User(name="John", email="john@gmail.com")
+
+        # Create books owned by each
+        book1 = models.Book(
+            title="Pride and Prejudice",
+            author="Jane Austen",
+            owner=user1
+        )
+        book2 = models.Book(
+            title="Animal Farm",
+            author="George Orwell",
+            owner=user2
+        )
+
+        db.add_all([user1, user2, book1, book2])
         db.commit()
+
     db.close()
 
 
@@ -38,8 +53,19 @@ def home():
 
 @app.get("/books")
 def get_books(db: Session = Depends(get_db)):
-    book = db.query(models.Book).first()
-    return {"book": {"title": book.title, "author": book.author, "owner": book.owner.name}}
+    """
+    Return all books with owner info
+    """
+    books = db.query(models.Book).all()
+    return [
+        {
+            "id": book.id,
+            "title": book.title,
+            "author": book.author,
+            "owner": {"id": book.owner.id, "name": book.owner.name}
+        }
+        for book in books
+    ]
 
 
 @app.post("/exchange/request")
@@ -65,5 +91,17 @@ def accept_request(db: Session = Depends(get_db)):
 
 @app.get("/profile")
 def profile(db: Session = Depends(get_db)):
-    user = db.query(models.User).first()
-    return {"name": user.name, "email": user.email, "book": user.book.title}
+    """
+    Return profile for Jane (the logged-in user)
+    """
+    user = db.query(models.User).filter_by(name="Jane").first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "name": user.name,
+        "email": user.email,
+        "books": [
+            {"title": book.title, "author": book.author}
+            for book in user.books
+        ],
+    }

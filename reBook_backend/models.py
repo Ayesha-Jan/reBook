@@ -8,7 +8,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     email = Column(String)
-    book = relationship("Book", back_populates="owner", uselist=False)
+    books = relationship("Book", back_populates="owner")
 
 
 class Book(Base):
@@ -17,7 +17,7 @@ class Book(Base):
     title = Column(String)
     author = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    owner = relationship("User", back_populates="book")
+    owner = relationship("User", back_populates="books")
     exchange = relationship("Exchange", back_populates="book", uselist=False)
 
 
@@ -27,4 +27,4 @@ class Exchange(Base):
     book_id = Column(Integer, ForeignKey("books.id"))
     requester_name = Column(String)
     status = Column(String, default="pending")
-    book = relationship("Book", back_populates="exchange")
+    book = relationship("Book", back_populates="exchange", uselist=False)

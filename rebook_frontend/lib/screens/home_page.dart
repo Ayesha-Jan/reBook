@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-import 'profile_page.dart';
+import 'package:rebook_frontend/services/api_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -10,62 +9,70 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  Map<String, dynamic>? book;
-  String message = "";
+  List<dynamic> books = [];
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    loadBook();
+    loadBooks();
   }
 
-  void loadBook() async {
-    final data = await ApiService.getBook();
-    setState(() => book = data["book"]);
+  Future<void> loadBooks() async {
+    try {
+      final allBooks = await ApiService.getBooks();
+      setState(() {
+        books = allBooks.where((book) => book['owner']['name'] != 'User1').toList();
+        loading = false;
+      });
+    } catch (e) {
+      print("Error loading books: $e");
+      setState(() => loading = false);
+    }
   }
 
-  void sendRequest() async {
-    final res = await ApiService.sendExchangeRequest("Bob");
-    setState(() => message = res["message"]);
-  }
-
-  void acceptRequest() async {
-    final res = await ApiService.acceptExchange();
-    setState(() => message = res["message"]);
+  Future<void> sendRequest(String name) async {
+    try {
+      await ApiService.sendExchangeRequest('User1');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Exchange request sent!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send request')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("ReBook")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (book != null) ...[
-              Text("📖 ${book!['title']}", style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text("Author: ${book!['author']}"),
-              Text("Owner: ${book!['owner']}"),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: sendRequest, child: const Text("Send Request")),
-              const SizedBox(height: 10),
-              ElevatedButton(onPressed: acceptRequest, child: const Text("Accept Request")),
-            ] else
-              const Center(child: CircularProgressIndicator()),
-            const SizedBox(height: 20),
-            Text(message, style: const TextStyle(color: Colors.green)),
-            const Spacer(),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-                },
-                child: const Text("Go to Profile"),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Available Books"),
+        backgroundColor: Color(0xC1FFAAD2),
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : books.isEmpty
+          ? const Center(child: Text("No books available for exchange"))
+          : ListView.builder(
+        itemCount: books.length,
+        itemBuilder: (context, index) {
+          final book = books[index];
+          return Card(
+            margin: const EdgeInsets.all(12),
+            elevation: 3,
+            child: ListTile(
+              title: Text(book['title']),
+              subtitle: Text("by ${book['author']} (Owner: ${book['owner']['name']})"),
+              trailing: ElevatedButton(
+                onPressed: () => sendRequest('User1'),
+                child: const Text("Request"),
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
